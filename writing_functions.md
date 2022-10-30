@@ -10,11 +10,12 @@ x_vec = rnorm(30, mean = 5, sd = 3)
 (x_vec - mean(x_vec)) / sd(x_vec)
 ```
 
-    ##  [1] -1.27306121 -0.80596543  0.66612863 -0.01687422  1.58093667  1.24928190
-    ##  [7]  0.39084027  0.45424765 -1.85969425  0.87256167  0.47669620 -0.22075945
-    ## [13]  0.39833958 -1.15118554  0.16964791  0.64861494 -1.06305385 -0.89191835
-    ## [19] -0.12557903  0.31540708 -0.38397601 -0.19372421 -0.66577065  1.90584713
-    ## [25]  1.37204909 -0.74059290 -1.42194797  1.09565137 -1.65138881  0.86924178
+    ##  [1] -0.403716717  0.444214900 -1.663844817  0.920853208 -1.055930197
+    ##  [6] -0.246969727 -0.713873743 -1.312957163  0.062360471  1.555819566
+    ## [11] -1.024040180  1.269606258  0.009541334 -1.209133423 -1.391476004
+    ## [16]  0.841556625  0.152499311 -1.353927756  0.374528638  1.508949572
+    ## [21] -0.044019161 -0.644732748 -0.365944657  0.280536779  1.724684968
+    ## [26]  1.702061387  0.534053559  0.622869855 -0.922909104  0.349338966
 
 I want a function to compute z-scores
 
@@ -38,11 +39,12 @@ z_scores = function(x) {
 z_scores(x_vec)
 ```
 
-    ##  [1] -1.27306121 -0.80596543  0.66612863 -0.01687422  1.58093667  1.24928190
-    ##  [7]  0.39084027  0.45424765 -1.85969425  0.87256167  0.47669620 -0.22075945
-    ## [13]  0.39833958 -1.15118554  0.16964791  0.64861494 -1.06305385 -0.89191835
-    ## [19] -0.12557903  0.31540708 -0.38397601 -0.19372421 -0.66577065  1.90584713
-    ## [25]  1.37204909 -0.74059290 -1.42194797  1.09565137 -1.65138881  0.86924178
+    ##  [1] -0.403716717  0.444214900 -1.663844817  0.920853208 -1.055930197
+    ##  [6] -0.246969727 -0.713873743 -1.312957163  0.062360471  1.555819566
+    ## [11] -1.024040180  1.269606258  0.009541334 -1.209133423 -1.391476004
+    ## [16]  0.841556625  0.152499311 -1.353927756  0.374528638  1.508949572
+    ## [21] -0.044019161 -0.644732748 -0.365944657  0.280536779  1.724684968
+    ## [26]  1.702061387  0.534053559  0.622869855 -0.922909104  0.349338966
 
 Try my function on some other things. These should give errors.
 
@@ -104,7 +106,7 @@ mean_and_sd(x_vec)
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  3.44  3.99
+    ## 1  1.91  4.45
 
 ## Multiple inputs
 
@@ -126,7 +128,7 @@ sim_data %>%
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  3.99  2.70
+    ## 1  4.35  2.87
 
 ``` r
 sim_mean_sd = function(samp_size, mu = 3, sigma = 4) {
@@ -150,7 +152,7 @@ sim_mean_sd(samp_size = 100, mu = 6, sigma = 3)
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  5.92  2.93
+    ## 1  6.05  2.91
 
 ``` r
 sim_mean_sd(mu = 6, samp_size = 100, sigma = 3)
@@ -159,7 +161,7 @@ sim_mean_sd(mu = 6, samp_size = 100, sigma = 3)
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  5.68  2.80
+    ## 1  6.30  2.96
 
 ``` r
 sim_mean_sd(samp_size = 100)
@@ -168,4 +170,145 @@ sim_mean_sd(samp_size = 100)
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  2.40  3.75
+    ## 1  3.30  4.23
+
+## Let’s review Napolean Dynamite
+
+``` r
+url = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber=1"
+
+dynamite_html = read_html(url)
+
+review_titles = 
+  dynamite_html %>%
+  html_nodes(".a-text-bold span") %>%
+  html_text()
+
+review_stars = 
+  dynamite_html %>%
+  html_nodes("#cm_cr-review_list .review-rating") %>%
+  html_text() %>%
+  str_extract("^\\d") %>%
+  as.numeric()
+
+review_text = 
+  dynamite_html %>%
+  html_nodes(".review-text-content span") %>%
+  html_text() %>% 
+  str_replace_all("\n", "") %>% 
+  str_trim()
+
+reviews = tibble(
+  title = review_titles,
+  stars = review_stars,
+  text = review_text
+)
+```
+
+What about the next page of reviews…
+
+Let’s turn that code into a function
+
+``` r
+read_page_reviews = function(url) {
+  
+  html = read_html(url)
+
+  review_titles = 
+    html %>%
+    html_nodes(".a-text-bold span") %>%
+    html_text()
+
+  review_stars = 
+    html %>%
+    html_nodes("#cm_cr-review_list .review-rating") %>%
+    html_text() 
+    str_extract("^\\d") %>%
+    as.numeric()
+
+  review_text = 
+    html %>%
+    html_nodes(".review-text-content span") %>%
+    html_text() %>% 
+    str_replace_all("\n", "") %>% 
+    str_trim() 
+
+  reviews = 
+    tibble(
+      title = review_titles,
+      stars = review_stars,
+      text = review_text
+    )
+  
+  reviews
+}
+```
+
+Let me try my function.
+
+``` r
+dynamite_url = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber=1"
+
+read_page_reviews(dynamite_url)
+```
+
+Let’s read a few pages of reviews.
+
+``` r
+dynamite_url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber="
+
+dynamite_urls = str_c(dynamite_url_base, 1:5)
+
+all_reviews =
+  bind_rows(
+    read_page_reviews(dynamite_urls[1]),
+    read_page_reviews(dynamite_urls[2]),
+    read_page_reviews(dynamite_urls[3]),
+    read_page_reviews(dynamite_urls[4]),
+    read_page_reviews(dynamite_urls[5])
+    )
+```
+
+## Mean scoping example
+
+``` r
+f = function(x) {
+  z = x + y
+  z
+}
+
+x = 1
+y = 2
+
+f(x = y)
+```
+
+    ## [1] 4
+
+## Functions as arguments
+
+``` r
+my_summary = function(x, sum_func) {
+  
+  sum_func(x)
+  
+}
+
+x_vec = rnorm(100, 3, 7)
+
+mean(x_vec)
+```
+
+    ## [1] 3.549368
+
+``` r
+median(x_vec)
+```
+
+    ## [1] 4.400311
+
+``` r
+my_summary(x_vec, IQR)
+```
+
+    ## [1] 8.318797
